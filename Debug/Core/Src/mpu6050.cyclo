@@ -1,0 +1,7 @@
+../Core/Inc/write_printf.h:13:5:_write	1
+../Core/Src/mpu6050.c:11:6:MPU6050_Init	2
+../Core/Src/mpu6050.c:47:6:MPU6050_ReadAll	2
+../Core/Src/mpu6050.c:65:6:MPU6050_Calibrate	1
+../Core/Src/mpu6050.c:81:6:MPU6050_CalculateOffsets	2
+../Core/Src/mpu6050.c:112:6:MPU6050_WriteOffsets	7
+../Core/Src/mpu6050.c:173:6:MPU6050_SoftReset	1

@@ -1,3 +1,1 @@
-../Core/Src/leds.c:16:6:HAL_UART_RxCpltCallback	2
-../Core/Src/leds.c:23:6:StartLEDTask	1
-../Core/Src/leds.c:33:6:StartDefaultTask	1
+../Core/Src/leds.c:34:6:StartMPU6050ReadWriteUART	1

@@ -5,11 +5,18 @@
  *      Author: patryk
  */
 
-#ifndef LEDS_H_
-#define LEDS_H_
+#ifndef INC_LEDS_H_
+#define INC_LEDS_H_
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
+#include "main.h"
+#include "cmsis_os.h"
+#include "usart.h"
+#include "dma.h"
+#include "mpu6050.h"
+
+//void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
+//void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
 void StartLEDTask(void *argument);
-void StartDefaultTask(void *argument);
+void StartMPU6050ReadWriteUART(void *argument);
 
 #endif /* INC_LEDS_H_ */

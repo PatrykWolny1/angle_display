@@ -14,6 +14,7 @@ RM := rm -rf
 -include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/subdir.mk
 -include Drivers/STM32F1xx_HAL_Driver/Src/subdir.mk
+-include Core/ThreadSafe/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
 -include objects.mk
@@ -89,7 +90,7 @@ main-build: camera_stabilizer.elf secondary-outputs
 
 # Tool invocations
 camera_stabilizer.elf camera_stabilizer.map: $(OBJS) $(USER_OBJS) /home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/STM32F103RBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "camera_stabilizer.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/STM32F103RBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="camera_stabilizer.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+	arm-none-eabi-g++ -o "camera_stabilizer.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/STM32F103RBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="camera_stabilizer.map" -Wl,--gc-sections -static -u _printf_float -u _malloc_r -u _free_r -u _sbrk_r -u _write_r -u _read_r --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
