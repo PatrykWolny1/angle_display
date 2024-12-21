@@ -8,9 +8,13 @@
 #ifndef INC_FREERTOS_H_
 #define INC_FREERTOS_H_
 
-#include "leds.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "rtos_threads.h"
+
+extern osMessageQueueId_t dataQueue;
+extern osMutexId_t uartMutex;
+extern osSemaphoreId_t dmaTxCompleteSemaphore;
 
 void MX_FREERTOS_Init(void);
 

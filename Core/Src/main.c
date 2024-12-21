@@ -18,15 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "dma.h"
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
-#include "freertos.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "mpu6050.h"
 
 /* USER CODE END Includes */
 
@@ -53,10 +52,7 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void InitMutexes(void);
-
 /* USER CODE BEGIN PFP */
-osMutexId_t uartMutex;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -68,7 +64,6 @@ int main(void) {
     MX_I2C1_Init();
     MX_DMA_Init();
     MX_USART2_UART_Init();
-    InitMutexes();
     MX_FREERTOS_Init();
 
 	while (1) {
@@ -83,12 +78,10 @@ int main(void) {
   * @retval int
   */
 
-
 /**
   * @brief System Clock Configuration
   * @retval None
   */
-
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -124,10 +117,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void InitMutexes(void) {
-    uartMutex = osMutexNew(NULL);
-    i2cMutex = osMutexNew(NULL);
-}
 /* USER CODE END 4 */
 
 /**

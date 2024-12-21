@@ -10,10 +10,7 @@
 
 #include "usart.h" // Include the generated USART configuration
 
-int _write(int file, char *data, int len) {
-    HAL_UART_Transmit(&huart2, (uint8_t *)data, len, HAL_MAX_DELAY);
-    return len;
-}
+int _write(int file, char *data, int len);
 
 
 #endif /* INC_WRITE_PRINTF_H_ */

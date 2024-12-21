@@ -13,6 +13,8 @@ void MPU6050_Init(void) {
 
     MPU6050_SoftReset();
 
+    HAL_Delay(2000);
+
     // Wake up the MPU6050 (write 0 to PWR_MGMT_1 register)
     data[0] = 0x6B;  // Register address
     data[1] = 0x00;  // Data to write
@@ -30,10 +32,15 @@ void MPU6050_Init(void) {
     data_config = 0x00;
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, GYRO_CONFIG, 1, &data_config, 1, HAL_MAX_DELAY);
 
-    // Set sample rate to 125Hz
-    data_config = 0x07;
-    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, SMPLRT_DIV, 1, &data_config, 1, HAL_MAX_DELAY);
+    uint8_t config;
 
+    // Set DLPF_CFG to 4 (21 Hz accelerometer, 20 Hz gyroscope bandwidth, 1 kHz sample rate)
+    config = 0x04;
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, CONFIG, 1, &config, 1, HAL_MAX_DELAY);
+
+    // Set sample rate to 100 Hz
+    config = 9; // 1000 / (1 + 9) = 100 Hz
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, SMPRT_DIV, 1, &config, 1, HAL_MAX_DELAY);
 
     uint8_t whoAmI = 0;
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x75, 1, &whoAmI, 1, HAL_MAX_DELAY);
@@ -42,27 +49,53 @@ void MPU6050_Init(void) {
     } else {
         printf("MPU6050 detected. WHO_AM_I = 0x%02X\r\n", whoAmI);
     }
+
+    uint8_t fifoConfig, userCtrl, gConfig, sConfig;
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, FIFO_EN, 1, &fifoConfig, 1, HAL_MAX_DELAY);
+//    printf("FIFO_EN: 0x%02X\r\n", fifoConfig);
+
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, USER_CTRL, 1, &userCtrl, 1, HAL_MAX_DELAY);
+//    printf("USER_CTRL: 0x%02X\r\n", userCtrl);
+
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_CONFIG, 1, &gConfig, 1, HAL_MAX_DELAY);
+//    printf("ACCEL CONFIG: 0x%02X\r\n", gConfig);
+
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, GYRO_CONFIG, 1, &sConfig, 1, HAL_MAX_DELAY);
+//    printf("GYRO CONFIG: 0x%02X\r\n", sConfig);
 }
 
-void MPU6050_ReadAll(int16_t *accelX, int16_t *accelY, int16_t *accelZ,
-                     int16_t *gyroX, int16_t *gyroY, int16_t *gyroZ, float *temp) {
+void MPU6050_ReadAll(float *accelX_g, float *accelY_g, float *accelZ_g,
+                     float *gyroX_s, float *gyroY_s, float *gyroZ_s, float *temp_c) {
     uint8_t buffer[14];
 
+    int16_t accelX, accelY, accelZ;
+    int16_t temp;
+    int16_t gyroX, gyroY, gyroZ;
+
     // Read 14 bytes starting from register 0x3B
-    if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x3B, I2C_MEMADD_SIZE_8BIT, buffer, 14, HAL_MAX_DELAY) == HAL_OK) {
-        *accelX = (int16_t)(buffer[0] << 8 | buffer[1]);
-        *accelY = (int16_t)(buffer[2] << 8 | buffer[3]);
-        *accelZ = (int16_t)(buffer[4] << 8 | buffer[5]);
-        *temp   = (int16_t)(buffer[6] << 8 | buffer[7]);
-        *gyroX  = (int16_t)(buffer[8] << 8 | buffer[9]);
-        *gyroY  = (int16_t)(buffer[10] << 8 | buffer[11]);
-        *gyroZ  = (int16_t)(buffer[12] << 8 | buffer[13]);
+    if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, I2C_MEMADD_SIZE_8BIT, buffer, 14, HAL_MAX_DELAY) == HAL_OK) {
+        accelX = (int16_t)((buffer[0] << 8) | buffer[1]);
+        accelY = (int16_t)((buffer[2] << 8) | buffer[3]);
+        accelZ = (int16_t)((buffer[4] << 8) | buffer[5]);
+        temp   = (int16_t)((buffer[6] << 8) | buffer[7]);
+        gyroX  = (int16_t)((buffer[8] << 8) | buffer[9]);
+        gyroY  = (int16_t)((buffer[10] << 8) | buffer[11]);
+        gyroZ  = (int16_t)((buffer[12] << 8) | buffer[13]);
     } else {
     	//Error handle
     }
+    *accelX_g = accelX / 16384.0f;
+	*accelY_g = accelY / 16384.0f;
+	*accelZ_g = accelZ / 16384.0f;
+
+	*temp_c = (temp / 340.0f) + 36.53f;
+
+	*gyroX_s = gyroX / 131.0f;
+	*gyroY_s = gyroY / 131.0f;
+	*gyroZ_s = gyroZ / 131.0f;
 }
 
-void MPU6050_Calibrate(void) {
+void MPU6050_CalibrateInternal(void) {
     int16_t accelOffsets[3], gyroOffsets[3];
 
     // Calculate offsets
@@ -82,61 +115,59 @@ void MPU6050_CalculateOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
     int32_t accelX_sum = 0, accelY_sum = 0, accelZ_sum = 0;
     int32_t gyroX_sum = 0, gyroY_sum = 0, gyroZ_sum = 0;
 
-    uint8_t rawData[6];
+    uint8_t rawData[14];
     for (int i = 0; i < 1000; i++) {
-        // Read accelerometer data
-        HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, 1, rawData, 6, HAL_MAX_DELAY);
-        accelX_sum += (int16_t)((rawData[0] << 8) | rawData[1]);
-        accelY_sum += (int16_t)((rawData[2] << 8) | rawData[3]);
-        accelZ_sum += (int16_t)((rawData[4] << 8) | rawData[5]);
-
-        // Read gyroscope data
-        HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, GYRO_XOUT_H, 1, rawData, 6, HAL_MAX_DELAY);
-        gyroX_sum += (int16_t)((rawData[0] << 8) | rawData[1]);
-        gyroY_sum += (int16_t)((rawData[2] << 8) | rawData[3]);
-        gyroZ_sum += (int16_t)((rawData[4] << 8) | rawData[5]);
-
-        HAL_Delay(2);
+        if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, I2C_MEMADD_SIZE_8BIT, rawData, 14, HAL_MAX_DELAY) == HAL_OK) {
+        	accelX_sum += (int16_t)((rawData[0] << 8) | rawData[1]);
+        	accelY_sum += (int16_t)((rawData[2] << 8) | rawData[3]);
+        	accelZ_sum += (int16_t)((rawData[4] << 8) | rawData[5]);
+        	gyroX_sum  += (int16_t)((rawData[8] << 8) | rawData[9]);
+        	gyroY_sum  += (int16_t)((rawData[10] << 8) | rawData[11]);
+        	gyroZ_sum  += (int16_t)((rawData[12] << 8) | rawData[13]);
+        } else {
+        	//Error handle
+        }
     }
 
     // Calculate average offsets
-    accelOffsets[0] = accelX_sum / 1000;
-    accelOffsets[1] = accelY_sum / 1000;
-    accelOffsets[2] = (accelZ_sum / 1000) - 16384; // Subtract 1g for Z-axis
+    accelOffsets[0] = -(accelX_sum / 1000);
+    accelOffsets[1] = -(accelY_sum / 1000);
+    accelOffsets[2] = -((accelZ_sum / 1000) - 16384); // Subtract 1g for Z-axis
 
-    gyroOffsets[0] = gyroX_sum / 1000;
-    gyroOffsets[1] = gyroY_sum / 1000;
-    gyroOffsets[2] = gyroZ_sum / 1000;
+    gyroOffsets[0] = -(gyroX_sum / 1000);
+    gyroOffsets[1] = -(gyroY_sum / 1000);
+    gyroOffsets[2] = -(gyroZ_sum / 1000);
 }
 
 void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
-    uint8_t data[2];
-    HAL_StatusTypeDef status;
+	uint8_t data[2];
     uint8_t readBack[2];
+
+    printf("Accel Offsets: X=%d, Y=%d, Z=%d\r\n", accelOffsets[0], accelOffsets[1], accelOffsets[2]);
+    printf("Gyro Offsets: X=%d, Y=%d, Z=%d\r\n", gyroOffsets[0], gyroOffsets[1], gyroOffsets[2]);
 
     // Write accelerometer offsets
     data[0] = (uint8_t)((accelOffsets[0] >> 8) & 0xFF); // High byte
-    data[1] = (uint8_t)(accelOffsets[0] & 0xFF);        // Low byte
-    status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, XA_OFFS_H, 1, data, 2, HAL_MAX_DELAY);
+    data[1] = (uint8_t)(accelOffsets[0] & 0xFE);        // Low byte
+    printf("High Byte: 0x%02X, Low Byte: 0x%02X\r\n", data[0], data[1]);
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, XA_OFFS_H, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
 
-    if (status != HAL_OK) printf("Error writing Accel X offset\r\n");
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, XA_OFFS_H, 1, readBack, 2, HAL_MAX_DELAY);
     int16_t writtenOffset = (int16_t)((readBack[0] << 8) | readBack[1]);
     printf("Accel X Offset Written: %d\r\n", writtenOffset);
 
     data[0] = (uint8_t)((accelOffsets[1] >> 8) & 0xFF); // High byte
-    data[1] = (uint8_t)(accelOffsets[1] & 0xFF);        // Low byte
-    status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, YA_OFFS_H, 1, data, 2, HAL_MAX_DELAY);
+    data[1] = (uint8_t)(accelOffsets[1] & 0xFE);        // Low byte
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, YA_OFFS_H, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
 
-    if (status != HAL_OK) printf("Error writing Accel Y offset\r\n");
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, YA_OFFS_H, 1, readBack, 2, HAL_MAX_DELAY);
     writtenOffset = (int16_t)((readBack[0] << 8) | readBack[1]);
     printf("Accel Y Offset Written: %d\r\n", writtenOffset);
 
     data[0] = (uint8_t)((accelOffsets[2] >> 8) & 0xFF); // High byte
-    data[1] = (uint8_t)(accelOffsets[2] & 0xFF);        // Low byte
-    status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ZA_OFFS_H, 1, data, 2, HAL_MAX_DELAY);
-    if (status != HAL_OK) printf("Error writing Accel Z offset\r\n");
+    data[1] = (uint8_t)(accelOffsets[2] & 0xFE);        // Low byte
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ZA_OFFS_H, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
+
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ZA_OFFS_H, 1, readBack, 2, HAL_MAX_DELAY);
     writtenOffset = (int16_t)((readBack[0] << 8) | readBack[1]);
     printf("Accel Z Offset Written: %d\r\n", writtenOffset);
@@ -144,17 +175,15 @@ void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
     // Write gyroscope offsets
     data[0] = (uint8_t)((gyroOffsets[0] >> 8) & 0xFF); // High byte
     data[1] = (uint8_t)(gyroOffsets[0] & 0xFF);        // Low byte
-    status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, XG_OFFS_USRH, 1, data, 2, HAL_MAX_DELAY);
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, XG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
 
-    if (status != HAL_OK) printf("Error writing Gyro X offset\r\n");
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, XG_OFFS_USRH, 1, readBack, 2, HAL_MAX_DELAY);
     writtenOffset = (int16_t)((readBack[0] << 8) | readBack[1]);
     printf("Gyro X Offset Written: %d\r\n", writtenOffset);
 
     data[0] = (uint8_t)((gyroOffsets[1] >> 8) & 0xFF); // High byte
     data[1] = (uint8_t)(gyroOffsets[1] & 0xFF);        // Low byte
-    status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, YG_OFFS_USRH, 1, data, 2, HAL_MAX_DELAY);
-    if (status != HAL_OK) printf("Error writing Gyro Y offset\r\n");
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, YG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
 
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, YG_OFFS_USRH, 1, readBack, 2, HAL_MAX_DELAY);
     writtenOffset = (int16_t)((readBack[0] << 8) | readBack[1]);
@@ -162,8 +191,7 @@ void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
 
     data[0] = (uint8_t)((gyroOffsets[2] >> 8) & 0xFF); // High byte
     data[1] = (uint8_t)(gyroOffsets[2] & 0xFF);        // Low byte
-    status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ZG_OFFS_USRH, 1, data, 2, HAL_MAX_DELAY);
-    if (status != HAL_OK) printf("Error writing Gyro Z offset\r\n");
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ZG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT	, data, 2, HAL_MAX_DELAY);
 
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ZG_OFFS_USRH, 1, readBack, 2, HAL_MAX_DELAY);
     writtenOffset = (int16_t)((readBack[0] << 8) | readBack[1]);
@@ -171,7 +199,27 @@ void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
 }
 
 void MPU6050_SoftReset(void) {
-    uint8_t data = 0x80; // DEVICE_RESET bit
-    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, PWR_MGMT_1, 1, &data, 1, HAL_MAX_DELAY);
+    uint8_t data_rst = 0x80; // DEVICE_RESET bit
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, PWR_MGMT_1, 1, &data_rst, 1, HAL_MAX_DELAY);
     HAL_Delay(1000); // Allow time for the reset to complete
+    uint8_t data[2] = {0x00, 0x00}; // Zero offset
+
+    // Reset X-axis offset
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, XA_OFFS_H, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
+
+    // Reset Y-axis offset
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, YA_OFFS_H, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
+
+    // Reset Z-axis offset
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ZA_OFFS_H, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
+
+    // Reset X-axis offset
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, XG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
+
+    // Reset Y-axis offset
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, YG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
+
+    // Reset Z-axis offset
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ZG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
+
 }

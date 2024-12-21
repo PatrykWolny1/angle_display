@@ -1,0 +1,3 @@
+../Core/Src/rtos_threads.c:20:6:HAL_UART_TxCpltCallback	2
+../Core/Src/rtos_threads.c:27:6:mpu6050_ReadData	5
+../Core/Src/rtos_threads.c:71:6:DataProcessing	5

@@ -35,7 +35,6 @@ extern "C" {
 extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN Private defines */
-extern osMutexId_t uartMutex;
 
 /* USER CODE END Private defines */
 
