@@ -1,3 +1,6 @@
+#ifndef _MPU6050_H
+#define _MPU6050_H
+
 #include <stdint.h>
 #include <stdio.h>
 #include "i2c.h"
@@ -19,15 +22,28 @@
 #define FIFO_EN 0x23
 #define USER_CTRL 0x6A
 
+struct {
+   float accelX;
+   float accelY;
+   float accelZ;
+   float gyroX;
+   float gyroY;
+   float gyroZ;
+   int16_t accelOffsets[3], gyroOffsets[3];
+} typedef MPU6050_Data;
 void MPU6050_Init(void);
 
-void MPU6050_ReadAll(float *accelX_g, float *accelY_g, float *accelZ_g,
-                     float *gyroX_s, float *gyroY_s, float *gyroZ_s, float *temp_c);
 
-void MPU6050_CalibrateInternal(void);
+void MPU6050_ReadAll(MPU6050_Data *dataToProcess);
+
+void MPU6050_CalibrateInternal(MPU6050_Data *dataToProcess);
+
+void MPU6050_CalibrateExternal(MPU6050_Data *dataToProcess);
 
 void MPU6050_CalculateOffsets(int16_t *accelOffsets, int16_t *gyroOffsets);
 
 void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets);
 
 void MPU6050_SoftReset(void);
+
+#endif

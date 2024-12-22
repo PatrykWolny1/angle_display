@@ -59,15 +59,17 @@
   * @param  None
   * @retval None
   */
+
 osMessageQueueId_t dataQueue;
 osMutexId_t uartMutex;
 osSemaphoreId_t dmaTxCompleteSemaphore;
+
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
     osKernelInitialize();
 
     // Create the data QUEUE
-    dataQueue = osMessageQueueNew(20, sizeof(float), NULL); // Queue with 20 slots
+    dataQueue = osMessageQueueNew(20, sizeof(MPU6050_Data), NULL); // Queue with 20 slots
     if (dataQueue == NULL) {
 		printf("No data in QUEUE!");
 		while (1);
@@ -99,7 +101,6 @@ void MX_FREERTOS_Init(void) {
     };
 
     osThreadNew(mpu6050_ReadData, NULL, &taskReadData);
-//    osThreadNew(DataProcessing, NULL, &taskProcessData);
     osThreadId_t processDataTaskHandle = osThreadNew(DataProcessing, NULL, &taskProcessData);
     if (processDataTaskHandle == NULL) {
         printf("Failed to create DataProcessing task\r\n");

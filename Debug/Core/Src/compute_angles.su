@@ -1,0 +1,4 @@
+../Core/Src/compute_angles.c:13:8:computeDT	40	static
+../Core/Src/compute_angles.c:23:7:radiansToDegrees	16	static
+../Core/Src/compute_angles.c:27:6:complementary_filter	16	static
+../Core/Src/compute_angles.c:31:15:computeAngles	40	static

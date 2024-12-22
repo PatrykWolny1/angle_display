@@ -8,6 +8,8 @@
 #include "mpu6050.h"
 #include "write_printf.h"
 
+extern MPU6050_Data dataToProcess;
+
 void MPU6050_Init(void) {
     uint8_t data[2];
 
@@ -34,13 +36,17 @@ void MPU6050_Init(void) {
 
     uint8_t config;
 
-    // Set DLPF_CFG to 4 (21 Hz accelerometer, 20 Hz gyroscope bandwidth, 1 kHz sample rate)
-    config = 0x04;
-    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, CONFIG, 1, &config, 1, HAL_MAX_DELAY);
 
     // Set sample rate to 100 Hz
-    config = 9; // 1000 / (1 + 9) = 100 Hz
+    config = 0x09; // 1000 / (1 + 9) = 100 Hz
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, SMPRT_DIV, 1, &config, 1, HAL_MAX_DELAY);
+
+    // Set DLPF_CFG to 4 (21 Hz accelerometer, 20 Hz gyroscope bandwidth, 1 kHz sample rate)
+    config = 0x02;
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, CONFIG, 1, &config, 1, HAL_MAX_DELAY);
+
+    config = 0x01;  // ACCEL_HPF = 1 (5 Hz cutoff frequency)
+    HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ACCEL_CONFIG, 1, &config, 1, HAL_MAX_DELAY);
 
     uint8_t whoAmI = 0;
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, 0x75, 1, &whoAmI, 1, HAL_MAX_DELAY);
@@ -64,49 +70,57 @@ void MPU6050_Init(void) {
 //    printf("GYRO CONFIG: 0x%02X\r\n", sConfig);
 }
 
-void MPU6050_ReadAll(float *accelX_g, float *accelY_g, float *accelZ_g,
-                     float *gyroX_s, float *gyroY_s, float *gyroZ_s, float *temp_c) {
+void MPU6050_ReadAll(MPU6050_Data *dataToProcess) {
     uint8_t buffer[14];
 
     int16_t accelX, accelY, accelZ;
-    int16_t temp;
     int16_t gyroX, gyroY, gyroZ;
 
     // Read 14 bytes starting from register 0x3B
     if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, I2C_MEMADD_SIZE_8BIT, buffer, 14, HAL_MAX_DELAY) == HAL_OK) {
-        accelX = (int16_t)((buffer[0] << 8) | buffer[1]);
-        accelY = (int16_t)((buffer[2] << 8) | buffer[3]);
-        accelZ = (int16_t)((buffer[4] << 8) | buffer[5]);
-        temp   = (int16_t)((buffer[6] << 8) | buffer[7]);
-        gyroX  = (int16_t)((buffer[8] << 8) | buffer[9]);
-        gyroY  = (int16_t)((buffer[10] << 8) | buffer[11]);
-        gyroZ  = (int16_t)((buffer[12] << 8) | buffer[13]);
+        accelX = (int16_t)((buffer[0] << 8) | buffer[1]) - dataToProcess->accelOffsets[0];
+        accelY = (int16_t)((buffer[2] << 8) | buffer[3]) - dataToProcess->accelOffsets[1];
+        accelZ = (int16_t)((buffer[4] << 8) | buffer[5]) - dataToProcess->accelOffsets[2];
+        gyroX  = (int16_t)((buffer[8] << 8) | buffer[9]) - dataToProcess->gyroOffsets[0];
+        gyroY  = (int16_t)((buffer[10] << 8) | buffer[11]) - dataToProcess->gyroOffsets[1];
+        gyroZ  = (int16_t)((buffer[12] << 8) | buffer[13]) - dataToProcess->gyroOffsets[2];
     } else {
     	//Error handle
     }
-    *accelX_g = accelX / 16384.0f;
-	*accelY_g = accelY / 16384.0f;
-	*accelZ_g = accelZ / 16384.0f;
+    dataToProcess->accelX = accelX / 16384.0f;
+    dataToProcess->accelY = accelY / 16384.0f;
+    dataToProcess->accelZ = accelZ / 16384.0f;
 
-	*temp_c = (temp / 340.0f) + 36.53f;
-
-	*gyroX_s = gyroX / 131.0f;
-	*gyroY_s = gyroY / 131.0f;
-	*gyroZ_s = gyroZ / 131.0f;
+    dataToProcess->gyroX = gyroX / 131.0f;
+    dataToProcess->gyroY = gyroY / 131.0f;
+    dataToProcess->gyroZ = gyroZ / 131.0f;
 }
 
-void MPU6050_CalibrateInternal(void) {
-    int16_t accelOffsets[3], gyroOffsets[3];
-
+void MPU6050_CalibrateInternal(MPU6050_Data *dataToProcess) {
     // Calculate offsets
-    MPU6050_CalculateOffsets(accelOffsets, gyroOffsets);
+    MPU6050_CalculateOffsets(dataToProcess->accelOffsets, dataToProcess->gyroOffsets);
 
     // Write offsets to MPU6050
-    MPU6050_WriteOffsets(accelOffsets, gyroOffsets);
+    MPU6050_WriteOffsets(dataToProcess->accelOffsets, dataToProcess->gyroOffsets);
 
     // Optional: Print offsets for debugging
-    printf("Accel Offsets: X=%d, Y=%d, Z=%d\r\n", accelOffsets[0], accelOffsets[1], accelOffsets[2]);
-    printf("Gyro Offsets: X=%d, Y=%d, Z=%d\r\n", gyroOffsets[0], gyroOffsets[1], gyroOffsets[2]);
+    printf("Accel Offsets: X=%d, Y=%d, Z=%d\r\n", dataToProcess->accelOffsets[0], dataToProcess->accelOffsets[1],
+    		dataToProcess->accelOffsets[2]);
+    printf("Gyro Offsets: X=%d, Y=%d, Z=%d\r\n", dataToProcess->gyroOffsets[0], dataToProcess->gyroOffsets[1],
+    		dataToProcess->gyroOffsets[2]);
+
+    HAL_Delay(2000);
+}
+
+void MPU6050_CalibrateExternal(MPU6050_Data *dataToProcess) {
+    // Calculate offsets
+    MPU6050_CalculateOffsets(dataToProcess->accelOffsets, dataToProcess->gyroOffsets);
+
+    // Optional: Print offsets for debugging
+    printf("Accel Offsets: X=%d, Y=%d, Z=%d\r\n", dataToProcess->accelOffsets[0], dataToProcess->accelOffsets[1],
+    		dataToProcess->accelOffsets[2]);
+    printf("Gyro Offsets: X=%d, Y=%d, Z=%d\r\n", dataToProcess->gyroOffsets[0], dataToProcess->gyroOffsets[1],
+    		dataToProcess->gyroOffsets[2]);
 
     HAL_Delay(2000);
 }
@@ -115,12 +129,15 @@ void MPU6050_CalculateOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
     int32_t accelX_sum = 0, accelY_sum = 0, accelZ_sum = 0;
     int32_t gyroX_sum = 0, gyroY_sum = 0, gyroZ_sum = 0;
 
+    int n = 4000;
+
     uint8_t rawData[14];
-    for (int i = 0; i < 1000; i++) {
+
+    for (int i = 0; i < n; i++) {
         if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, I2C_MEMADD_SIZE_8BIT, rawData, 14, HAL_MAX_DELAY) == HAL_OK) {
         	accelX_sum += (int16_t)((rawData[0] << 8) | rawData[1]);
         	accelY_sum += (int16_t)((rawData[2] << 8) | rawData[3]);
-        	accelZ_sum += (int16_t)((rawData[4] << 8) | rawData[5]);
+        	accelZ_sum += (int16_t)((rawData[4] << 8) | rawData[5]) - 16384;
         	gyroX_sum  += (int16_t)((rawData[8] << 8) | rawData[9]);
         	gyroY_sum  += (int16_t)((rawData[10] << 8) | rawData[11]);
         	gyroZ_sum  += (int16_t)((rawData[12] << 8) | rawData[13]);
@@ -130,13 +147,13 @@ void MPU6050_CalculateOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
     }
 
     // Calculate average offsets
-    accelOffsets[0] = -(accelX_sum / 1000);
-    accelOffsets[1] = -(accelY_sum / 1000);
-    accelOffsets[2] = -((accelZ_sum / 1000) - 16384); // Subtract 1g for Z-axis
+    accelOffsets[0] = (accelX_sum / n);
+    accelOffsets[1] = (accelY_sum / n);
+    accelOffsets[2] = (accelZ_sum / n);
 
-    gyroOffsets[0] = -(gyroX_sum / 1000);
-    gyroOffsets[1] = -(gyroY_sum / 1000);
-    gyroOffsets[2] = -(gyroZ_sum / 1000);
+    gyroOffsets[0] = (gyroX_sum / n);
+    gyroOffsets[1] = (gyroY_sum / n);
+    gyroOffsets[2] = (gyroZ_sum / n);
 }
 
 void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
@@ -174,7 +191,7 @@ void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
 
     // Write gyroscope offsets
     data[0] = (uint8_t)((gyroOffsets[0] >> 8) & 0xFF); // High byte
-    data[1] = (uint8_t)(gyroOffsets[0] & 0xFF);        // Low byte
+    data[1] = (uint8_t)(gyroOffsets[0] & 0xFE);        // Low byte
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, XG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
 
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, XG_OFFS_USRH, 1, readBack, 2, HAL_MAX_DELAY);
@@ -182,7 +199,7 @@ void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
     printf("Gyro X Offset Written: %d\r\n", writtenOffset);
 
     data[0] = (uint8_t)((gyroOffsets[1] >> 8) & 0xFF); // High byte
-    data[1] = (uint8_t)(gyroOffsets[1] & 0xFF);        // Low byte
+    data[1] = (uint8_t)(gyroOffsets[1] & 0xFE);        // Low byte
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, YG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT, data, 2, HAL_MAX_DELAY);
 
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, YG_OFFS_USRH, 1, readBack, 2, HAL_MAX_DELAY);
@@ -190,7 +207,7 @@ void MPU6050_WriteOffsets(int16_t *accelOffsets, int16_t *gyroOffsets) {
     printf("Gyro Y Offset Written: %d\r\n", writtenOffset);
 
     data[0] = (uint8_t)((gyroOffsets[2] >> 8) & 0xFF); // High byte
-    data[1] = (uint8_t)(gyroOffsets[2] & 0xFF);        // Low byte
+    data[1] = (uint8_t)(gyroOffsets[2] & 0xFE);        // Low byte
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ZG_OFFS_USRH, I2C_MEMADD_SIZE_8BIT	, data, 2, HAL_MAX_DELAY);
 
     HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ZG_OFFS_USRH, 1, readBack, 2, HAL_MAX_DELAY);
