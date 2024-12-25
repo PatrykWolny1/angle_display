@@ -38,14 +38,14 @@ void MPU6050_Init(void) {
 
 
     // Set sample rate to 100 Hz
-    config = 0x09; // 1000 / (1 + 9) = 100 Hz
+    config = 0x00; // 1000 / (1 + 9) = 100 Hz
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, SMPRT_DIV, 1, &config, 1, HAL_MAX_DELAY);
 
-    // Set DLPF_CFG to 4 (21 Hz accelerometer, 20 Hz gyroscope bandwidth, 1 kHz sample rate)
-    config = 0x02;
+    // Set DLPF_CFG to 0x02 (21 Hz accelerometer, 20 Hz gyroscope bandwidth, 1 kHz sample rate)
+    config = 0x00;
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, CONFIG, 1, &config, 1, HAL_MAX_DELAY);
 
-    config = 0x01;  // ACCEL_HPF = 1 (5 Hz cutoff frequency)
+    config = 0x00;  // ACCEL_HPF = 0x01 (5 Hz cutoff frequency)
     HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, ACCEL_CONFIG, 1, &config, 1, HAL_MAX_DELAY);
 
     uint8_t whoAmI = 0;

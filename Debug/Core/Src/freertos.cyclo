@@ -1,1 +1,1 @@
-../Core/Src/freertos.c:65:6:MX_FREERTOS_Init	5
+../Core/Src/freertos.c:77:6:FreeRTOS_Init	6

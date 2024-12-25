@@ -21,6 +21,7 @@
 #include "cmsis_os.h"
 #include "dma.h"
 #include "i2c.h"
+#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -51,7 +52,6 @@
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
@@ -62,9 +62,11 @@ int main(void) {
     SystemClock_Config();
     MX_GPIO_Init();
     MX_I2C1_Init();
+    MX_SPI2_Init();
+	HAL_SPI_MspInit(&hspi2);
     MX_DMA_Init();
     MX_USART2_UART_Init();
-    MX_FREERTOS_Init();
+    FreeRTOS_Init();
 
 	while (1) {
 

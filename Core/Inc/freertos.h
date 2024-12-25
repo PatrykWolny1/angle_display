@@ -7,15 +7,17 @@
 
 #ifndef INC_FREERTOS_H_
 #define INC_FREERTOS_H_
+/* USER CODE BEGIN Variables */
 
-#include "main.h"
-#include "cmsis_os.h"
 #include "rtos_threads.h"
 
 extern osMessageQueueId_t dataQueue;
 extern osMutexId_t uartMutex;
 extern osSemaphoreId_t dmaTxCompleteSemaphore;
 
-void MX_FREERTOS_Init(void);
+void FreeRTOS_Init(void);
+
+/* USER CODE END Variables */
+
 
 #endif /* INC_FREERTOS_H_ */

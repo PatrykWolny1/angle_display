@@ -18,13 +18,17 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "freertos.h"
+#include "FreeRTOS.h"
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "freertos.h"
+#include "task.h"
+#include "main.h"
+#include "cmsis_os.h"
 
 /* USER CODE END Includes */
 
@@ -45,7 +49,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
+osMessageQueueId_t dataQueue;
+osMutexId_t uartMutex;
+osSemaphoreId_t dmaTxCompleteSemaphore;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 
@@ -54,107 +60,69 @@
 
 /* USER CODE END FunctionPrototypes */
 
+
+
 /**
   * @brief  FreeRTOS initialization
   * @param  None
   * @retval None
   */
 
-osMessageQueueId_t dataQueue;
-osMutexId_t uartMutex;
-osSemaphoreId_t dmaTxCompleteSemaphore;
-
-void MX_FREERTOS_Init(void) {
-  /* USER CODE BEGIN Init */
-    osKernelInitialize();
-
-    // Create the data QUEUE
-    dataQueue = osMessageQueueNew(20, sizeof(MPU6050_Data), NULL); // Queue with 20 slots
-    if (dataQueue == NULL) {
-		printf("No data in QUEUE!");
-		while (1);
-	}
-
-    // Create the UART mutex
-    uartMutex = osMutexNew(NULL);  // Create a mutex
-    if (uartMutex == NULL) {
-        printf("Failed to create UART Mutex!");
-        while (1);  // Handle error
-    }
-
-    dmaTxCompleteSemaphore = osSemaphoreNew(1, 0, NULL);  // Initial count is 0
-    if (dmaTxCompleteSemaphore == NULL) {
-        printf("Failed to create DMA semaphore!");
-        while (1);
-    }
-
-    osThreadAttr_t taskReadData = {
-        .name = "mpu6050_ReadData",
-        .priority = osPriorityAboveNormal,
-        .stack_size = 512 * 4
-    };
-
-    osThreadAttr_t taskProcessData = {
-        .name = "DataProcessing",
-        .priority = osPriorityNormal,
-        .stack_size = 512 * 4
-    };
-
-    osThreadNew(mpu6050_ReadData, NULL, &taskReadData);
-    osThreadId_t processDataTaskHandle = osThreadNew(DataProcessing, NULL, &taskProcessData);
-    if (processDataTaskHandle == NULL) {
-        printf("Failed to create DataProcessing task\r\n");
-        while (1);
-    }
-    vTaskStartScheduler();
-
-    osKernelStart();
-
-    while (1) {
-    }
-
-}
-  /* USER CODE END Init */
-
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
-
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
-
-  /* Create the thread(s) */
-  /* creation of defaultTask */
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
-
-
-
 /* USER CODE BEGIN Header_StartDefaultTask */
-/**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
+
 /* USER CODE END Header_StartDefaultTask */
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void FreeRTOS_Init(void) {
+    osKernelInitialize();
 
+	// Create a message queue to pass data between threads
+    dataQueue = osMessageQueueNew(10, sizeof(MPU6050_Data), NULL); // Assuming MPU6050_Data is the data structure for MPU6050 readings
+    if (dataQueue == NULL) {
+        printf("Failed to create data queue\r\n");
+        return;
+    }
+
+    // Create a mutex for UART access
+    uartMutex = osMutexNew(NULL);
+    if (uartMutex == NULL) {
+        printf("Failed to create UART mutex\r\n");
+        return;
+    }
+
+    // Create a semaphore for DMA TX completion signaling
+    dmaTxCompleteSemaphore = osSemaphoreNew(1, 0, NULL);
+    if (dmaTxCompleteSemaphore == NULL) {
+        printf("Failed to create DMA TX semaphore\r\n");
+        return;
+    }
+
+    // Create a thread for reading data from the MPU6050 sensor
+    osThreadAttr_t mpu6050TaskAttributes = {
+        .name = "MPU6050Task",
+        .priority = osPriorityNormal,
+        .stack_size = 512 * 5  // Adjust stack size as needed
+    };
+    if (osThreadNew((osThreadFunc_t)mpu6050_ReadData, NULL, &mpu6050TaskAttributes) == NULL) {
+        printf("Failed to create MPU6050 task\r\n");
+        return;
+    }
+
+    // Create a thread for processing data
+    osThreadAttr_t dataProcessingTaskAttributes = {
+        .name = "DataProcessingTask",
+        .priority = osPriorityNormal,
+        .stack_size = 512 * 10  // Adjust stack size as needed
+    };
+    if (osThreadNew((osThreadFunc_t)DataProcessing, NULL, &dataProcessingTaskAttributes) == NULL) {
+        printf("Failed to create Data Processing task\r\n");
+        return;
+    }
+
+    printf("FreeRTOS initialization complete\r\n");
+
+    osKernelStart();
+}
 /* USER CODE END Application */
 

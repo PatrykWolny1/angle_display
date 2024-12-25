@@ -18,6 +18,7 @@
 #include "usart.h"
 #include "dma.h"
 #include "mpu6050.h"
+#include "oled.h"
 #include "queue.h"
 #include "freertos.h"
 #include "compute_angles.h"

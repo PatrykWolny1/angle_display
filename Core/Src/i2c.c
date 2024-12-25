@@ -111,39 +111,4 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
 /* USER CODE BEGIN 1 */
 
-osMutexId_t i2cMutex;
-
-HAL_StatusTypeDef SafeHAL_I2C_Mem_Read(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
-                                       uint16_t MemAddress, uint16_t MemAddSize,
-                                       uint8_t *pData, uint16_t Size, uint32_t Timeout) {
-    HAL_StatusTypeDef status;
-
-    // Acquire the mutex
-    if (osMutexAcquire(i2cMutex, osWaitForever) == osOK) {
-        status = HAL_I2C_Mem_Read(hi2c, DevAddress, MemAddress, MemAddSize, pData, Size, Timeout);
-        osMutexRelease(i2cMutex); // Release the mutex
-    } else {
-        status = HAL_ERROR; // Mutex acquisition failed
-    }
-
-    return status;
-}
-
-HAL_StatusTypeDef SafeHAL_I2C_Mem_Write(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
-                                        uint16_t MemAddress, uint16_t MemAddSize,
-                                        uint8_t *pData, uint16_t Size, uint32_t Timeout) {
-    HAL_StatusTypeDef status;
-
-    // Acquire the mutex
-    if (osMutexAcquire(i2cMutex, osWaitForever) == osOK) {
-        status = HAL_I2C_Mem_Write(hi2c, DevAddress, MemAddress, MemAddSize, pData, Size, Timeout);
-        osMutexRelease(i2cMutex); // Release the mutex
-    } else {
-        status = HAL_ERROR; // Mutex acquisition failed
-    }
-
-    return status;
-}
-
-
 /* USER CODE END 1 */
