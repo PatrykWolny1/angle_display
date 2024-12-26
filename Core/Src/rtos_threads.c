@@ -84,7 +84,7 @@ void DataProcessing(void *argument) {
 
 
     Kalman_Init(&resultKalmanFilterPitch, 0.001f, 0.003f, 0.03f); // Initialize the Kalman filter with noise parameters
-    Kalman_Init(&resultKalmanFilterRoll, 0.001f, 0.003f, 0.03f); // Initialize the Kalman filter with noise parameters
+    Kalman_Init(&resultKalmanFilterRoll, 0.005f, 0.001f, 0.004f); // Initialize the Kalman filter with noise parameters
     uint32_t prevTick = osKernelGetTickCount();  // Initialize previous tick
 
     while (1) {
@@ -103,24 +103,23 @@ void DataProcessing(void *argument) {
             SSD1306_ClearRegion(29, 28, 40, 8); // Clear the region for pitch value
             SSD1306_ClearRegion(69, 28, 40, 8); // Clear the region for roll value
 
-//            dt = computeDT(&prevTick);
-//            kalmanPitch = Kalman_Update(&resultKalmanFilterPitch, resultsPRY->pitchAcc, receivedData.gyroX, (float)dt);
             dt = computeDT(&prevTick);
+            kalmanPitch = Kalman_Update(&resultKalmanFilterPitch, resultsPRY->pitchAcc, receivedData.gyroX, (float)dt);
             kalmanRoll = Kalman_Update(&resultKalmanFilterRoll, resultsPRY->rollAcc, receivedData.gyroY, (float)dt);
              //SSD1306_DrawFloat(29, 28, resultsCompFilter->pitch, 1, 1);
-//            SSD1306_DrawFloat(29, 28, kalmanPitch, 1, 1);
+            SSD1306_DrawFloat(29, 28, kalmanPitch, 1, 1);
 
             //SSD1306_DrawFloat(69, 28, resultsCompFilter->roll, 1, 1);
             SSD1306_DrawFloat(69, 28, kalmanRoll, 1, 1);
 
             SSD1306_UpdateScreen();
 
-            // Format processed data for computeAngles()
-            //snprintf(buffer, sizeof(buffer), "Acc | Pitch=%6.2f Roll=%6.2f | Gyro | Pitch=%6.2f Roll=%6.2f"
-            //		"Yaw=%6.2f\r\n", resultsPRY->pitchAcc, resultsPRY->rollAcc, resultsPRY->pitchGyro,
-			//		resultsPRY->rollGyro, resultsPRY->yawGyro);
-
-            // Format processed data for filters
+//             Format processed data for computeAngles()
+//            snprintf(buffer, sizeof(buffer), "Acc | Pitch=%6.2f Roll=%6.2f | Gyro | Pitch=%6.2f Roll=%6.2f"
+//            		"Yaw=%6.2f\r\n", resultsPRY->pitchAcc, resultsPRY->rollAcc, resultsPRY->pitchGyro,
+//					resultsPRY->rollGyro, resultsPRY->yawGyro);
+//
+//             Format processed data for filters
 //            snprintf(buffer, sizeof(buffer), "CompFilter | Pitch=%6.2f Roll=%6.2f\r\n",
 //            		resultsCompFilter->pitch, resultsCompFilter->roll);
 
@@ -139,7 +138,7 @@ void DataProcessing(void *argument) {
 //            }
 //    		osDelay(2);  // Prevent rapid polling
         } else {
-            //printf("Queue is empty\r\n");
+//            printf("Queue is empty\r\n");
         }
     }
 }
