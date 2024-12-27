@@ -8,10 +8,18 @@
 
 
 #include "rtos_threads.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
+#include <errno.h>
+#include <unistd.h> // For getcwd
+#include <stdlib.h>  // For malloc/free
+#include <string.h>
 
 extern osMessageQueueId_t dataQueue;
 extern osMutexId_t uartMutex;
 extern osSemaphoreId_t dmaTxCompleteSemaphore;
+extern void initialise_monitor_handles(void);
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
     if (huart == &huart2) {
@@ -80,6 +88,17 @@ void DataProcessing(void *argument) {
     double dt;
     char buffer[200];
 
+    errno = 0;
+    FILE *filePtr = fopen("/home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/Core/Src/measurements.txt", "w");
+
+    if (filePtr == NULL) {
+         printf("Error opening file: %s (errno: %d)\n", strerror(errno), errno);
+         return 1;
+     }
+
+
+    fprintf(filePtr, "Kalman Pitch|Kalman Roll|Acc Pitch|Acc Roll|Gyro Pitch|Gyro Roll\r\n");
+
     printf("DataProcessing task started\r\n");
 
 
@@ -96,8 +115,8 @@ void DataProcessing(void *argument) {
             SSD1306_DrawString(69, 16, "Roll", 1); // Label for pitch
 
             //resultsCompFilter = complementary_filter(&resultsPRY, &receivedData, &prevTick);
-            resultsPRY = computeAnglesAcc(&receivedData);
-
+//            resultsPRY = computeAnglesAcc(&receivedData);
+            resultsPRY = computeAngles(&receivedData, &prevTick);
 
             // Clear regions where pitch and roll values are displayed
             SSD1306_ClearRegion(29, 28, 40, 8); // Clear the region for pitch value
@@ -113,6 +132,12 @@ void DataProcessing(void *argument) {
             SSD1306_DrawFloat(69, 28, kalmanRoll, 1, 1);
 
             SSD1306_UpdateScreen();
+
+
+            fprintf(filePtr, "%.2f|%.2f|%.2f|%.2f|%.2f|%.2f\r\n",
+            		kalmanPitch, kalmanRoll, resultsPRY->pitchAcc, resultsPRY->rollAcc,
+					resultsPRY->pitchGyro, resultsPRY->rollGyro);
+
 
 //             Format processed data for computeAngles()
 //            snprintf(buffer, sizeof(buffer), "Acc | Pitch=%6.2f Roll=%6.2f | Gyro | Pitch=%6.2f Roll=%6.2f"

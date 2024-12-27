@@ -8,9 +8,7 @@
 #ifndef INC_RTOS_THREADS_H_
 #define INC_RTOS_THREADS_H_
 
-#include <stdint.h>
-#include <stdio.h>
-#include <time.h>
+
 
 #include "main.h"
 #include "cmsis_os.h"
@@ -23,6 +21,13 @@
 #include "freertos.h"
 #include "compute_angles.h"
 #include "write_printf.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
+#include <errno.h>
+#include <unistd.h> // For getcwd
+#include <stdlib.h>  // For malloc/free
+
 
 void mpu6050_ReadData(void *argument);
 void DataProcessing(void *argument);

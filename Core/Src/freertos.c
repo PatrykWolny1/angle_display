@@ -113,7 +113,7 @@ void FreeRTOS_Init(void) {
     osThreadAttr_t dataProcessingTaskAttributes = {
         .name = "DataProcessingTask",
         .priority = osPriorityNormal,
-        .stack_size = 512 * 10  // Adjust stack size as needed
+        .stack_size = 512 * 12  // Adjust stack size as needed
     };
     if (osThreadNew((osThreadFunc_t)DataProcessing, NULL, &dataProcessingTaskAttributes) == NULL) {
         printf("Failed to create Data Processing task\r\n");

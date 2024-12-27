@@ -24,7 +24,6 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -54,10 +53,12 @@
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
+extern void initialise_monitor_handles(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 int main(void) {
+	initialise_monitor_handles();
     HAL_Init();
     SystemClock_Config();
     MX_GPIO_Init();
