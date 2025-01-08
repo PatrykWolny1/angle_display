@@ -17,6 +17,33 @@ RM := rm -rf
 -include Core/ThreadSafe/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
+-include Core/SimpleFOC/sensors/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/teensy/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/stm32/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/samd/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/rp2040/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/renesas/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/esp32/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/atmega/subdir.mk
+-include Core/SimpleFOC/drivers/hardware_specific/subdir.mk
+-include Core/SimpleFOC/drivers/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/teensy/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32l4/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32g4/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32f7/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32f4/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32f1/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/stm32/b_g431/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/stm32/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/samd/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/rp2040/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/esp32/subdir.mk
+-include Core/SimpleFOC/current_sense/hardware_specific/subdir.mk
+-include Core/SimpleFOC/current_sense/subdir.mk
+-include Core/SimpleFOC/communication/subdir.mk
+-include Core/SimpleFOC/common/base_classes/subdir.mk
+-include Core/SimpleFOC/common/subdir.mk
+-include Core/SimpleFOC/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -90,7 +117,7 @@ main-build: camera_stabilizer.elf secondary-outputs
 
 # Tool invocations
 camera_stabilizer.elf camera_stabilizer.map: $(OBJS) $(USER_OBJS) /home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/STM32F103RBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "camera_stabilizer.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/STM32F103RBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="camera_stabilizer.map" -Wl,--gc-sections -static -u _printf_float -specs=rdimon.specs -lc -lrdimon -u _malloc_r -u _free_r -u _sbrk_r -u _write_r -u _read_r --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+	arm-none-eabi-g++ -o "camera_stabilizer.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/STM32F103RBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="camera_stabilizer.map" -Wl,--gc-sections -static -u _printf_float -u _malloc_r -u _free_r -u _sbrk_r -u _write_r -u _read_r --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -1,0 +1,5 @@
+SPI2 -> OLED (3.3V)
+PB_13 PB15 PB1 (rst) PB2 (d/c)
+
+I2C -> MPU6050 (3.3V)
+PB_6 PB_7

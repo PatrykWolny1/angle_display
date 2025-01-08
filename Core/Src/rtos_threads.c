@@ -28,6 +28,25 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
     }
 }
 
+void SimpleBGC_RequestData(void)
+{
+    uint8_t txBuffer[10] = {0};  // Buffer to hold the command
+    uint8_t rxBuffer[10] = {0};  // Buffer to hold the response
+
+    /* Fill the txBuffer with the command (example command: 0x01) */
+    txBuffer[0] = 0x01;  // Replace with a valid SimpleBGC command
+    txBuffer[1] = 0x00;  // Example payload (check SimpleBGC protocol)
+
+    /* Send the command and receive the response */
+    SimpleBGC_SendReceive(txBuffer, rxBuffer, 10);
+
+    /* Process the response data in rxBuffer */
+    for (int i = 0; i < 10; i++)
+    {
+        printf("Byte %d: 0x%02X\n", i, rxBuffer[i]);
+    }
+}
+
 void mpu6050_ReadData(void *argument) {
     MPU6050_Data dataToProcess;
 
@@ -42,6 +61,7 @@ void mpu6050_ReadData(void *argument) {
     //MPU6050_CalibrateInternal(&dataToProcess);
     MPU6050_CalibrateExternal(&dataToProcess);
     printf("MPU6050 calibrated\r\n");
+    SimpleBGC_RequestData();
     while (1) {
         // Read sensor data
         MPU6050_ReadAll(&dataToProcess);
@@ -88,22 +108,22 @@ void DataProcessing(void *argument) {
     double dt;
     char buffer[200];
 
-    errno = 0;
-    FILE *filePtr = fopen("/home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/Core/Src/measurements.txt", "w");
-
-    if (filePtr == NULL) {
-         printf("Error opening file: %s (errno: %d)\n", strerror(errno), errno);
-         return 1;
-     }
-
-
-    fprintf(filePtr, "Kalman Pitch|Kalman Roll|Acc Pitch|Acc Roll|Gyro Pitch|Gyro Roll\r\n");
+//    errno = 0;
+//    FILE *filePtr = fopen("/home/patryk/Programming/STM32CubeIDE/STM32_Workspace/camera_stabilizer/Core/Src/measurements.txt", "w");
+//
+//    if (filePtr == NULL) {
+//         printf("Error opening file: %s (errno: %d)\n", strerror(errno), errno);
+//         return 1;
+//     }
+//
+//
+//    fprintf(filePtr, "Kalman Pitch|Kalman Roll|Acc Pitch|Acc Roll|Gyro Pitch|Gyro Roll\r\n");
 
     printf("DataProcessing task started\r\n");
 
 
-    Kalman_Init(&resultKalmanFilterPitch, 0.001f, 0.003f, 0.03f); // Initialize the Kalman filter with noise parameters
-    Kalman_Init(&resultKalmanFilterRoll, 0.005f, 0.001f, 0.004f); // Initialize the Kalman filter with noise parameters
+    Kalman_Init(&resultKalmanFilterPitch, 0.005f, 0.003f, 0.004f); // Initialize the Kalman filter with noise parameters
+    Kalman_Init(&resultKalmanFilterRoll, 0.005f, 0.003f, 0.004f); // Initialize the Kalman filter with noise parameters
     uint32_t prevTick = osKernelGetTickCount();  // Initialize previous tick
 
     while (1) {
@@ -117,7 +137,6 @@ void DataProcessing(void *argument) {
             //resultsCompFilter = complementary_filter(&resultsPRY, &receivedData, &prevTick);
 //            resultsPRY = computeAnglesAcc(&receivedData);
             resultsPRY = computeAngles(&receivedData, &prevTick);
-
             // Clear regions where pitch and roll values are displayed
             SSD1306_ClearRegion(29, 28, 40, 8); // Clear the region for pitch value
             SSD1306_ClearRegion(69, 28, 40, 8); // Clear the region for roll value
@@ -134,9 +153,9 @@ void DataProcessing(void *argument) {
             SSD1306_UpdateScreen();
 
 
-            fprintf(filePtr, "%.2f|%.2f|%.2f|%.2f|%.2f|%.2f\r\n",
-            		kalmanPitch, kalmanRoll, resultsPRY->pitchAcc, resultsPRY->rollAcc,
-					resultsPRY->pitchGyro, resultsPRY->rollGyro);
+//            fprintf(filePtr, "%.2f|%.2f|%.2f|%.2f|%.2f|%.2f\r\n",
+//            		kalmanPitch, kalmanRoll, resultsPRY->pitchAcc, resultsPRY->rollAcc,
+//					resultsPRY->pitchGyro, resultsPRY->rollGyro);
 
 
 //             Format processed data for computeAngles()
@@ -148,7 +167,12 @@ void DataProcessing(void *argument) {
 //            snprintf(buffer, sizeof(buffer), "CompFilter | Pitch=%6.2f Roll=%6.2f\r\n",
 //            		resultsCompFilter->pitch, resultsCompFilter->roll);
 
-            // Transmit processed data over UART
+//             Format processed data for filters
+//            snprintf(buffer, sizeof(buffer), "%6.2f|%6.2f|%6.2f|%6.2f|%6.2f|%6.2f\r\n",
+//					kalmanPitch, kalmanRoll, resultsPRY->pitchAcc, resultsPRY->rollAcc,
+//					resultsPRY->pitchGyro, resultsPRY->rollGyro);
+
+//             Transmit processed data over UART
 //            if (osMutexAcquire(uartMutex, 100) == osOK) {  // Use timeout to avoid deadlocks
 //                if (HAL_UART_Transmit_DMA(&huart2, (uint8_t *)buffer, strlen(buffer)) == HAL_OK) {
 //                    if (osSemaphoreAcquire(dmaTxCompleteSemaphore, 100) != osOK) {
@@ -161,7 +185,7 @@ void DataProcessing(void *argument) {
 //            } else {
 //                printf("UART mutex acquire failed\r\n");
 //            }
-//    		osDelay(2);  // Prevent rapid polling
+    		osDelay(2);  // Prevent rapid polling
         } else {
 //            printf("Queue is empty\r\n");
         }
