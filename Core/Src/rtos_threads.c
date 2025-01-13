@@ -21,31 +21,6 @@ extern osMutexId_t uartMutex;
 extern osSemaphoreId_t dmaTxCompleteSemaphore;
 extern void initialise_monitor_handles(void);
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart == &huart2) {
-        osSemaphoreRelease(dmaTxCompleteSemaphore);
-
-    }
-}
-
-void SimpleBGC_RequestData(void)
-{
-    uint8_t txBuffer[10] = {0};  // Buffer to hold the command
-    uint8_t rxBuffer[10] = {0};  // Buffer to hold the response
-
-    /* Fill the txBuffer with the command (example command: 0x01) */
-    txBuffer[0] = 0x01;  // Replace with a valid SimpleBGC command
-    txBuffer[1] = 0x00;  // Example payload (check SimpleBGC protocol)
-
-    /* Send the command and receive the response */
-    SimpleBGC_SendReceive(txBuffer, rxBuffer, 10);
-
-    /* Process the response data in rxBuffer */
-    for (int i = 0; i < 10; i++)
-    {
-        printf("Byte %d: 0x%02X\n", i, rxBuffer[i]);
-    }
-}
 
 void mpu6050_ReadData(void *argument) {
     MPU6050_Data dataToProcess;
@@ -61,7 +36,6 @@ void mpu6050_ReadData(void *argument) {
     //MPU6050_CalibrateInternal(&dataToProcess);
     MPU6050_CalibrateExternal(&dataToProcess);
     printf("MPU6050 calibrated\r\n");
-    SimpleBGC_RequestData();
     while (1) {
         // Read sensor data
         MPU6050_ReadAll(&dataToProcess);

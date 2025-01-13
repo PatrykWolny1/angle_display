@@ -1,0 +1,2 @@
+../Core/Src/gpio.c:32:6:GPIO_I2C1	24	static
+../Core/Src/gpio.c:46:6:MX_GPIO_Init	40	static

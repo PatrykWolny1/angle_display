@@ -17,15 +17,22 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include "main.h"
 #include "cmsis_os.h"
 #include "dma.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
+#include "i2c.h"
+#include "tim.h"
+#include "write_printf.h"
+#include <string.h>
+#include <stdio.h>
+#include "stm32f1xx_hal.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
@@ -52,27 +59,124 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// Define the PWM duty cycle
+#define PWM_MIN_DUTY_CYCLE 20  // Minimum duty cycle (20%)
+#define PWM_MAX_DUTY_CYCLE 100 // Maximum duty cycle (100%)
+#define PWM_START_DUTY_CYCLE 50 // Start with 50% duty cycle
+#define COMMUTATION_STEPS 6     // 6-step commutation for BLDC motor
+#define DELAY_BETWEEN_STEPS 10  // Delay in ms between commutation steps
+
+// Function to initialize the motor driver
+// Commutation table for trapezoidal control (6 steps)
+const uint8_t commutation_table[COMMUTATION_STEPS][6] = {
+    {1, 0, 1, 0, 0, 0},  // Step 1
+    {1, 0, 0, 0, 1, 0},  // Step 2
+    {0, 0, 0, 0, 1, 1},  // Step 3
+    {0, 1, 0, 0, 0, 1},  // Step 4
+    {0, 1, 1, 0, 0, 0},  // Step 5
+    {1, 0, 0, 1, 0, 0}   // Step 6
+};
+void Motor_Init(void)
+{
+    // Ensure the driver is enabled
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_3, GPIO_PIN_SET); // Set VIO/NSTDBY high
+}
+
+// Function to start the motor
+void Motor_Start(void)
+{
+    // Start PWM on all channels
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);  // UH
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);  // UL
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);  // VH
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);  // VL
+    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);  // WH
+    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);  // WL
+}
+
+// Function to stop the motor
+void Motor_Stop(void)
+{
+    // Stop PWM on all channels
+    HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);  // UH
+    HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);  // UL
+    HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_3);  // VH
+    HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_4);  // VL
+    HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);  // WH
+    HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);  // WL
+}
+
+// Function to set the current phase based on the commutation table
+void Set_Phase(uint8_t step, uint8_t duty_cycle)
+{
+    // Set PWM duty cycle for each phase based on the commutation table
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, commutation_table[step][0] ? duty_cycle : 0); // UH
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, commutation_table[step][1] ? duty_cycle : 0); // UL
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, commutation_table[step][2] ? duty_cycle : 0); // VH
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, commutation_table[step][3] ? duty_cycle : 0); // VL
+    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, commutation_table[step][4] ? duty_cycle : 0); // WH
+    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, commutation_table[step][5] ? duty_cycle : 0); // WL
+}
+
+//void Full_Rotation(void)
+//{
+//    uint16_t total_steps = COMMUTATION_STEPS * POLE_PAIRS;  // Calculate total steps
+//    uint16_t step = 0;
+//
+//    for (uint16_t i = 0; i < total_steps; i++)
+//    {
+//        // Set the current commutation phase
+//        Set_Phase(step);
+//
+//        // Move to the next step
+//        step = (step + 1) % COMMUTATION_STEPS;
+//
+//        // Delay between steps (adjust for speed control)
+//        HAL_Delay(DELAY_BETWEEN_STEPS);
+//    }
+//}
+
 int main(void) {
-	initialise_monitor_handles();
     HAL_Init();
     SystemClock_Config();
     MX_GPIO_Init();
     MX_I2C1_Init();
     MX_SPI2_Init();
 	HAL_SPI_MspInit(&hspi2);
-    MX_DMA_Init();
+    MX_USART3_UART_Init();
     MX_USART2_UART_Init();
-    FreeRTOS_Init();
+    MX_DMA_Init();
+    MX_TIM2_Init();
+	MX_TIM3_Init();
+    // Initialize the motor driver
+    Motor_Init();
 
-	while (1) {
+    // Start the motor
+    Motor_Start();
 
-	}
+    // Execute a full mechanical rotation
+//    Full_Rotation();
+
+    // Stop the motor after rotation
+//    Motor_Stop();
+
+    // Main loop
+    uint8_t step = 0;
+    while (1)
+    {
+		// Set the current commutation phase with 50% duty cycle
+		Set_Phase(step, 50);
+
+		// Move to the next step
+		step = (step + 1) % COMMUTATION_STEPS;
+		// Delay between steps (adjust for motor speed)
+		HAL_Delay(10);
+    }
 }
 
 /* USER CODE END 0 */

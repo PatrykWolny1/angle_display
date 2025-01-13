@@ -1,0 +1,2 @@
+../Core/Src/rtos_threads.c:25:6:mpu6050_ReadData	256	static
+../Core/Src/rtos_threads.c:72:6:DataProcessing	376	static

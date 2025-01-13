@@ -38,33 +38,6 @@ CPP_DEPS :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
-Core/SimpleFOC \
-Core/SimpleFOC/common/base_classes \
-Core/SimpleFOC/common \
-Core/SimpleFOC/communication \
-Core/SimpleFOC/current_sense \
-Core/SimpleFOC/current_sense/hardware_specific \
-Core/SimpleFOC/current_sense/hardware_specific/esp32 \
-Core/SimpleFOC/current_sense/hardware_specific/rp2040 \
-Core/SimpleFOC/current_sense/hardware_specific/samd \
-Core/SimpleFOC/current_sense/hardware_specific/stm32/b_g431 \
-Core/SimpleFOC/current_sense/hardware_specific/stm32 \
-Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32f1 \
-Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32f4 \
-Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32f7 \
-Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32g4 \
-Core/SimpleFOC/current_sense/hardware_specific/stm32/stm32l4 \
-Core/SimpleFOC/current_sense/hardware_specific/teensy \
-Core/SimpleFOC/drivers \
-Core/SimpleFOC/drivers/hardware_specific/atmega \
-Core/SimpleFOC/drivers/hardware_specific \
-Core/SimpleFOC/drivers/hardware_specific/esp32 \
-Core/SimpleFOC/drivers/hardware_specific/renesas \
-Core/SimpleFOC/drivers/hardware_specific/rp2040 \
-Core/SimpleFOC/drivers/hardware_specific/samd \
-Core/SimpleFOC/drivers/hardware_specific/stm32 \
-Core/SimpleFOC/drivers/hardware_specific/teensy \
-Core/SimpleFOC/sensors \
 Core/Src \
 Core/Startup \
 Core/ThreadSafe \

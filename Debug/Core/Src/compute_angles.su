@@ -1,0 +1,7 @@
+../Core/Src/compute_angles.c:14:8:computeDT	48	static
+../Core/Src/compute_angles.c:42:7:radiansToDegrees	16	static
+../Core/Src/compute_angles.c:46:13:complementary_filter	56	static
+../Core/Src/compute_angles.c:64:6:Kalman_Init	24	static
+../Core/Src/compute_angles.c:81:7:Kalman_Update	56	static
+../Core/Src/compute_angles.c:131:15:computeAngles	40	static
+../Core/Src/compute_angles.c:152:15:computeAnglesAcc	32	static
