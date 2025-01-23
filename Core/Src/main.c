@@ -170,7 +170,7 @@ int main(void) {
     while (1)
     {
 		// Set the current commutation phase with 50% duty cycle
-		Set_Phase(step, 50);
+		Set_Phase(step, 40);
 
 		// Move to the next step
 		step = (step + 1) % COMMUTATION_STEPS;
